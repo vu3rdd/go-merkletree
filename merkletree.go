@@ -2,7 +2,7 @@ package merkletree
 
 import (
 	"encoding/hex"
-	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	//	"log"
 )
@@ -13,7 +13,7 @@ const (
 	C = "C"
 )
 
-type Hash [sha1.Size]byte
+type Hash [sha256.Size]byte
 type Position string // L or R
 
 // a particular tree, can be either a node (containing a hash and
@@ -32,7 +32,7 @@ func (h Hash) String() string {
 }
 
 func hash(data []byte) Hash {
-	return sha1.Sum(data)
+	return sha256.Sum256(data)
 }
 
 // operations

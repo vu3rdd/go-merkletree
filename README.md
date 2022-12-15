@@ -1,7 +1,7 @@
 # Introduction
 
 Merkle Tree implementation in Go. Written mainly to learn about merkle
-trees and not for production use. The hashing scheme is fixed (sha1).
+trees and not for production use. The hashing scheme is fixed (sha256).
 
 # API
 
