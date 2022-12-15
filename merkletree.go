@@ -108,51 +108,6 @@ func NewMerkleTree(chunks [][]byte) *MerkleTree {
 	return &leafs[0]
 }
 
-func nSpace(n int) string {
-	s := ""
-	for i := 0; i < n; i++ {
-		s = s + " "
-	}
-	return s
-}
-
-func (mTree *MerkleTree) Depth() int {
-	return mTree.depth
-}
-
-func (mTree *MerkleTree) Show() {
-	if mTree == nil {
-		return
-	}
-
-	// fmt.Printf("%s\n", mTree.hash)
-
-	nodes := []*MerkleTree{}
-	if mTree.left != nil {
-		nodes = append(nodes, mTree.left)
-	}
-	if mTree.right != nil {
-		nodes = append(nodes, mTree.right)
-	}
-	for {
-		if len(nodes) == 0 {
-			return
-		}
-
-		node := nodes[0]
-		nodes = nodes[1:]
-
-		// fmt.Printf("%s\n", node.hash)
-
-		if node.left != nil {
-			nodes = append(nodes, node.left)
-		}
-		if node.right != nil {
-			nodes = append(nodes, node.right)
-		}
-	}
-}
-
 // given a leaf node, return a list of Nodes (nodes already contain
 // their corresponding positions, which is needed to combine the
 // hashes the right way)
@@ -202,6 +157,40 @@ func (mTree *MerkleTree) Proof(chunk []byte) []*MerkleTree {
 	return siblingNodes
 }
 
+// The receiver gets the data, creates chunks and recomputes the root
+// hash and let us say, it doesn't match. How do we know which block
+// is corrupted?
+//
+// request the two hashes below the root. Check if they match, if the
+// root hash doesn't match, one or both of the the hashes one level
+// below the root also would not match. Let us say, the right one does
+// not match. So, repeat for the two child nodes of the faulty node,
+// go on until you hit the leaf to find the faulty chunk. This only
+// needs O(log n) comparisons.
+
+func (mTree *MerkleTree) Verify(proof []*MerkleTree, chunk []byte) bool {
+	// combine first element of the proof with the hash of chunk
+	// to obtain a hash of the parent node. Combine that with the
+	// next proof element to obtain its parent... and so on. Until
+	// we exhaust the proof list. At that point, the hash we have
+	// should match the root hash.
+
+	h := hash(chunk)
+	var pHash Hash
+	for _, p := range proof {
+		if p.pos == L {
+			pHash = hash(append(p.hash[:], h[:] ...))
+		} else {
+			pHash = hash(append(h[:], p.hash[:] ...))
+		}
+		h = pHash
+		fmt.Printf("intermediate node hash: %s\n", pHash)
+	}
+
+	// fmt.Printf("h = %s\n, rootHash = %s\n", h, mTree.hash)
+	return h == mTree.hash
+}
+
 func (mTree *MerkleTree) findNode(h Hash) *MerkleTree {
 	if mTree.hash == h {
 		return mTree
@@ -246,36 +235,39 @@ func (mTree *MerkleTree) findPath(node *MerkleTree, path []*MerkleTree) []*Merkl
 	return []*MerkleTree{}
 }
 
-// The receiver gets the data, creates chunks and recomputes the root
-// hash and let us say, it doesn't match. How do we know which block
-// is corrupted?
-// 
-// request the two hashes below the root. Check if they match, if the
-// root hash doesn't match, one or both of the the hashes one level
-// below the root also would not match. Let us say, the right one does
-// not match. So, repeat for the two child nodes of the faulty node,
-// go on until you hit the leaf to find the faulty chunk. This only
-// needs O(log n) comparisons.
+func (mTree *MerkleTree) Depth() int {
+	return mTree.depth
+}
 
-func (mTree *MerkleTree) Verify(proof []*MerkleTree, chunk []byte) bool {
-	// combine first element of the proof with the hash of chunk
-	// to obtain a hash of the parent node. Combine that with the
-	// next proof element to obtain its parent... and so on. Until
-	// we exhaust the proof list. At that point, the hash we have
-	// should match the root hash.
-
-	h := hash(chunk)
-	var pHash Hash
-	for _, p := range proof {
-		if p.pos == L {
-			pHash = hash(append(p.hash[:], h[:] ...))
-		} else {
-			pHash = hash(append(h[:], p.hash[:] ...))
-		}
-		h = pHash
-		fmt.Printf("intermediate node hash: %s\n", pHash)
+func (mTree *MerkleTree) Show() {
+	if mTree == nil {
+		return
 	}
 
-	// fmt.Printf("h = %s\n, rootHash = %s\n", h, mTree.hash)
-	return h == mTree.hash
+	// fmt.Printf("%s\n", mTree.hash)
+
+	nodes := []*MerkleTree{}
+	if mTree.left != nil {
+		nodes = append(nodes, mTree.left)
+	}
+	if mTree.right != nil {
+		nodes = append(nodes, mTree.right)
+	}
+	for {
+		if len(nodes) == 0 {
+			return
+		}
+
+		node := nodes[0]
+		nodes = nodes[1:]
+
+		// fmt.Printf("%s\n", node.hash)
+
+		if node.left != nil {
+			nodes = append(nodes, node.left)
+		}
+		if node.right != nil {
+			nodes = append(nodes, node.right)
+		}
+	}
 }
